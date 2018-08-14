@@ -30,4 +30,13 @@
 # available at http://guides.rubyonrails.org/i18n.html.
 
 en:
-  hello: "Hello world"
+  api:
+    errors:
+      solution_not_found: "This solution could not be found"
+      solution_not_accessible: "You do not have permission to view this solution"
+      track_not_found: "The track you specified does not exist"
+      track_ambiguous: "Please specify a track id"
+      exercise_not_found: "The exercise you specified could not be found"
+      duplicate_iteration: "No files you submitted have changed since your last iteration"
+      resource_not_found: "This URL was not recognised"
+      team_not_found: "The team could not be found"

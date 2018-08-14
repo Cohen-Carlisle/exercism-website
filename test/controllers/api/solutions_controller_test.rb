@@ -22,7 +22,7 @@ class API::SolutionsControllerTest < API::TestBase
     assert_response 404
     expected = {error: {
       type: "track_not_found",
-      message: "Track not found",
+      message: "The track you specified does not exist",
       fallback_url: tracks_url
     }}
     actual = JSON.parse(response.body, symbolize_names: true)
@@ -36,7 +36,7 @@ class API::SolutionsControllerTest < API::TestBase
     assert_response 404
     expected = {error: {
       type: "exercise_not_found",
-      message: "Exercise not found",
+      message: "The exercise you specified could not be found",
       fallback_url: track_url(track)
     }}
     actual = JSON.parse(response.body, symbolize_names: true)
@@ -226,6 +226,12 @@ class API::SolutionsControllerTest < API::TestBase
     setup_user
     get api_solution_path(999), headers: @headers, as: :json
     assert_response 404
+    expected = {error: {
+      type: "solution_not_found",
+      message: "This solution could not be found"
+    }}
+    actual = JSON.parse(response.body, symbolize_names: true)
+    assert_equal expected, actual
   end
 
   test "show should return 200 for solution if user is solution_user" do
@@ -314,6 +320,12 @@ class API::SolutionsControllerTest < API::TestBase
 
     get api_solution_path(solution), headers: @headers, as: :json
     assert_response 403
+    expected = {error: {
+      type: "solution_not_accessible",
+      message: "You do not have permission to view this solution"
+    }}
+    actual = JSON.parse(response.body, symbolize_names: true)
+    assert_equal expected, actual
   end
 
   test "show should return solution when solution is unlocked" do
@@ -351,7 +363,13 @@ class API::SolutionsControllerTest < API::TestBase
     setup_user
     solution = create :solution
     patch api_solution_path(solution), headers: @headers, as: :json
-    assert_response 404
+    assert_response 403
+    expected = {error: {
+      type: "solution_not_accessible",
+      message: "You do not have permission to view this solution"
+    }}
+    actual = JSON.parse(response.body, symbolize_names: true)
+    assert_equal expected, actual
   end
 
   test "update should create iteration" do
@@ -410,6 +428,11 @@ class API::SolutionsControllerTest < API::TestBase
           as: :json
 
     assert_response 400
-    assert_equal 'duplicate_iteration', JSON.parse(response.body, symbolize_names: true)[:error][:type]
+    expected = {error: {
+      type: "duplicate_iteration",
+      message: "No files you submitted have changed since your last iteration"
+    }}
+    actual = JSON.parse(response.body, symbolize_names: true)
+    assert_equal expected, actual
   end
 end

@@ -9,7 +9,7 @@ class API::SolutionsController < APIController
     end
 
     unless current_user.may_view_solution?(solution)
-      return render_403(:user_may_not_download_solution, "You may not download this solution")
+      return render_solution_not_accessible
     end
 
     responder = API::SolutionResponder.new(solution, current_user)
@@ -60,7 +60,7 @@ class API::SolutionsController < APIController
           if current_user.may_unlock_exercise?(user_track, exercise)
             solution = CreateSolution.(current_user, exercise)
           else
-            return render_solution_not_found
+            return render_solution_not_unlocked
           end
         end
 
@@ -71,7 +71,7 @@ class API::SolutionsController < APIController
           solution = solutions.first
 
         elsif solutions.size > 1
-          return render_error(400, :track_ambiguous, "Please specify a track id", possible_track_ids: solutions.flat_map {|s|s.exercise.track.slug}.uniq)
+          return render_error(400, :track_ambiguous, possible_track_ids: solutions.flat_map {|s|s.exercise.track.slug}.uniq)
 
         else
           exercises = Exercise.side.where(unlocked_by: nil).where(track_id: current_user.tracks).where(slug: params[:exercise_id]).includes(:track)
@@ -80,7 +80,7 @@ class API::SolutionsController < APIController
           elsif exercises.empty?
             return render_404(:exercise_not_found)
           elsif exercises.size > 1
-            return render_error(400, :track_ambiguous, "Please specify a track id", possible_track_ids: solutions.flat_map {|s|s.exercise.track.slug}.uniq)
+            return render_error(400, :track_ambiguous, possible_track_ids: solutions.flat_map {|s|s.exercise.track.slug}.uniq)
           end
         end
       end
@@ -93,14 +93,12 @@ class API::SolutionsController < APIController
 
   def update
     begin
-      solution = SolutionBase.find_by_uuid!(params[:id], current_user.id)
+      solution = SolutionBase.find_by_uuid!(params[:id])
     rescue
-      # This covers both a non-existing solution and a solution
-      # belonging to someone else. We might want seperate messages
-      # but I'm choosing not to leak the existance of a solution
-      # at this stage, but unifying the errors.
       return render_solution_not_found
     end
+
+    return render_solution_not_accessible unless solution.user_id == current_user.id
 
     params[:files].each do |file|
       if file.size.to_f > NUM_BYTES_IN_MEGABYTE
@@ -111,7 +109,7 @@ class API::SolutionsController < APIController
     begin
       CreateIteration.(solution, params[:files])
     rescue DuplicateIterationError
-      return render_error(400, :duplicate_iteration, "No files have changed since your last attempt")
+      return render_error(400, :duplicate_iteration)
     end
 
     render json: {}, status: 201
